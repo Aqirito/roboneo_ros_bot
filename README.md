@@ -5,6 +5,10 @@
 - **ROS 2 Distribution**: Jazzy Jalisco (LTS, released May 2024)
 - **Microcontroller**: ESP32 (with WiFi capability)
 - **Development Environment**: Arduino IDE (latest version)
+- **Additional Hardware**:
+  - HC-SR04 Ultrasonic Sensor
+  - DC Motors with motor driver (L298N or similar)
+  - Wheels and chassis for robot platform
 - **Network**: Both ESP32 and Ubuntu machine should be on the same local network (WiFi or Ethernet)
 - **Python 3**: Ensure Python 3 is installed on your Ubuntu system
 - **Basic Knowledge**: Familiarity with ROS 2 concepts, Arduino programming, and terminal commands
@@ -79,25 +83,73 @@ Download as ZIP: [micro_ros_arduino](https://github.com/micro-ROS/micro_ros_ardu
     - `Tools → Board → ESP32 Arduino → ESP32 Dev Module`
     - `Tools → Port → [Your ESP32 Port]` (usually `/dev/ttyUSB0` or `/dev/ttyACM0`)
 
-### 4. ESP32 Publisher Code (String "Hello" Message)
+### 4. Hardware Setup
 
-Here's the complete ESP32 code that publishes a "hello" string message via WiFi UDP: [esp32_hello_publisher.ino](roboneo_bot/ESP32/esp32_hello_publisher.ino)
+#### HC-SR04 Ultrasonic Sensor Connections:
+```
+ESP32         HC-SR04
+---------------------
+5V     ---->  VCC
+GND    ---->  GND
+GPIO 3 ---->  Trig
+GPIO 1 ---->  Echo
+```
 
+#### Motor Driver (L298N) Connections:
+```
+ESP32         Motor Driver     Motors
+-------------------------------------
+GPIO 16  ---> IN1 (Left)      Left Motor
+GPIO 17  ---> IN2 (Left)      
+GPIO 18  ---> IN3 (Right)     Right Motor
+GPIO 19  ---> IN4 (Right)
 
-**Key Configuration Points**:
+5V       ---> VCC (Logic)
+GND      ---> GND
+```
+
+### 5. ESP32 Arduino Sketches
+
+The project includes multiple Arduino sketches for different functionalities:
+
+#### A. Basic String Publisher
+ESP32 code that publishes a "hello" string message via WiFi UDP: [esp32_hello_publisher.ino](roboneo_bot/ESP32/esp32_hello_publisher.ino)
+
+#### B. Ultrasonic Sensor Publisher
+ESP32 code that publishes distance measurements from HC-SR04 sensor: [ultrasonic_publisher.ino](roboneo_bot/ESP32/ultrasonic_publisher.ino)
+
+#### C. Motor Control Subscriber
+ESP32 code that subscribes to Twist messages for motor control: [twist_subscriber.ino](roboneo_bot/ESP32/twist_subscriber.ino)
+
+#### D. Complete Robot Node
+Combined functionality with both ultrasonic sensor publishing and motor control: [roboneo_bot.ino](roboneo_bot/ESP32/roboneo_bot.ino)
+
+**Key Configuration Points for all sketches**:
 
 - Update `YOUR_WIFI_SSID` and `YOUR_WIFI_PASSWORD` with your network credentials
 - Change `host_ip` to your Ubuntu PC's IP address (find with `ip addr show`)
-- The code publishes to topic `/esp32/hello` every second
 - Built-in LED (pin 2) indicates micro-ROS agent connection status
+- All sketches use UDP port 8888 for communication
 
+### 6. ROS 2 Python Scripts
 
-### 5. ROS 2 Subscriber (Python)
+Create ROS 2 nodes for communication with ESP32:
 
-Create a ROS 2 subscriber to receive messages from the ESP32: [hello_subscriber.py](roboneo_bot/hello_sub.py)
+#### A. Basic String Subscriber
+Receives messages from ESP32 hello publisher: [hello_sub.py](roboneo_bot/hello_sub.py)
 
-#### 5.1. Build and Source Your ROS 2 Workspace
-You likely already have the rclpy and std_msgs packages installed as part of your ROS 2 system. It’s good practice to run rosdep in the root of your workspace (ros2_ws) to check for missing dependencies before building:
+#### B. LED Control Publisher
+Publishes messages to control ESP32 LED: [led_state_pub.py](roboneo_bot/led_state_pub.py)
+
+#### C. Ultrasonic Distance Subscriber
+Receives distance measurements from ESP32: [ultrasonic_sub.py](roboneo_bot/ultrasonic_sub.py)
+
+#### D. Robot Test Script
+Comprehensive test script for the complete robot system: [test_roboneo_bot.py](roboneo_bot/test_roboneo_bot.py)
+
+### 7. Build and Source Your ROS 2 Workspace
+
+You likely already have the rclpy, std_msgs, and geometry_msgs packages installed as part of your ROS 2 system. It's good practice to run rosdep in the root of your workspace (ros2_ws) to check for missing dependencies before building:
 
 ```bash
 rosdep install -i --from-path src --rosdistro jazzy -y
@@ -111,8 +163,9 @@ colcon build --packages-select roboneo_bot
 source install/setup.bash
 ```
 
-### 6. Running the Complete System
+### 8. Running the Complete System
 
+#### For Basic Hello Publisher/Subscriber:
 **Terminal 1 - Start micro-ROS Agent:**
 
 ```bash
@@ -141,13 +194,93 @@ ros2 topic list
 ros2 topic echo /esp32/hello
 ```
 
+#### For Complete Roboneo Bot:
+**Terminal 1 - Start micro-ROS Agent:**
 
-### 7. Flash and Test ESP32
+```bash
+source ~/microros_ws/install/local_setup.bash
+ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
+```
 
-1. **Upload Code**: Flash the Arduino code to your ESP32
+**Terminal 2 - Run Ultrasonic Distance Subscriber:**
+
+```bash
+source /opt/ros/jazzy/setup.bash
+ros2 run roboneo_bot ultrasonic_sub
+```
+
+**Terminal 3 - Run Robot Test Script:**
+
+```bash
+source /opt/ros/jazzy/setup.bash
+ros2 run roboneo_bot test_roboneo_bot
+```
+
+### 9. Flash and Test ESP32
+
+1. **Upload Code**: Flash the desired Arduino sketch to your ESP32
 2. **Monitor Connection**: Watch the serial monitor - you should see WiFi connection and micro-ROS agent discovery
 3. **Verify Communication**: The ESP32's LED should turn on when connected to the agent
-4. **Check Messages**: Your Python subscriber should receive "Hello from ESP32!" messages
+4. **Check Messages**: Your Python subscribers should receive messages from the ESP32
+
+### 10. Advanced Usage
+
+#### Running Individual Components:
+To run individual components of the roboneo_bot system:
+
+```bash
+# Publish distance measurements
+ros2 topic pub /ultrasonic_distance std_msgs/msg/Float32 "data: 0.0" --once
+
+# Control motors with Twist messages
+ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "linear:
+  x: 0.5
+  y: 0.0
+  z: 0.0
+angular:
+  x: 0.0
+  y: 0.0
+  z: 0.5" --once
+```
+
+#### Testing the Complete Robot:
+Use the test script to verify all functionality:
+
+```bash
+ros2 run roboneo_bot test_roboneo_bot
+```
+
+This will:
+1. Move the robot forward
+2. Rotate the robot
+3. Stop the robot
+4. Display distance measurements
+
+#### Controlling the Robot with teleop_twist_keyboard:
+You can manually control the roboneo_bot using the teleop_twist_keyboard package:
+
+**Terminal 1 - Start micro-ROS Agent:**
+```bash
+source ~/microros_ws/install/local_setup.bash
+ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
+```
+
+**Terminal 2 - Run teleop_twist_keyboard:**
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+
+Follow the on-screen instructions to control the robot:
+- `i`/`k` - Move forward/backward
+- `j`/`l` - Turn left/right
+- `q`/`z` - Increase/decrease linear speed
+- `w`/`x` - Increase/decrease angular speed
+- `space` - Stop the robot
+
+**Terminal 3 - Monitor distance sensor (optional):**
+```bash
+ros2 topic echo /ultrasonic_distance
+```
 
 ## Troubleshooting Tips
 
@@ -156,6 +289,8 @@ ros2 topic echo /esp32/hello
 - **No topics visible**: Ensure both devices are on the same network and firewall allows UDP traffic on port 8888[^1_8][^1_9]
 - **Connection fails**: Verify IP address is correct and micro-ROS agent is running[^1_8]
 - **WiFi connection issues**: Double-check SSID and password in the ESP32 code[^1_10]
+- **Sensor readings inaccurate**: Check HC-SR04 wiring and power supply
+- **Motor not responding**: Verify motor driver connections and power supply
 
 **Network Verification:**
 
@@ -167,7 +302,13 @@ ping [ESP32_IP]
 netstat -ulnp | grep 8888
 ```
 
-This setup provides a robust foundation for ESP32-ROS 2 Jazzy communication over your local network via UDP, enabling real-time bidirectional communication between your microcontroller and ROS 2 system.[^1_11][^1_12]
+**Debugging Connection Issues:**
+1. Check that the micro-ROS agent is running on port 8888
+2. Verify that both ESP32 and PC are on the same network
+3. Confirm that the IP address in the ESP32 code matches your PC's IP
+4. Use the serial monitor to check ESP32 connection status
+
+This setup provides a robust foundation for ESP32-ROS 2 Jazzy communication over your local network via UDP, enabling real-time bidirectional communication between your microcontroller and ROS 2 system for robotics applications.[^1_11][^1_12]
 <span style="display:none">[^1_13][^1_14][^1_15][^1_16][^1_17][^1_18][^1_19][^1_20][^1_21][^1_22][^1_23][^1_24][^1_25][^1_26][^1_27][^1_28][^1_29][^1_30][^1_31][^1_32][^1_33][^1_34][^1_35][^1_36][^1_37][^1_38][^1_39][^1_40][^1_41][^1_42][^1_43][^1_44][^1_45][^1_46][^1_47][^1_48][^1_49][^1_50][^1_51][^1_52][^1_53][^1_54][^1_55][^1_56][^1_57][^1_58][^1_59][^1_60][^1_61][^1_62]</span>
 
 <div style="text-align: center">⁂</div>
