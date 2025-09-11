@@ -24,14 +24,14 @@ ESP32         HC-SR04
 ---------------------
 5V     ---->  VCC
 GND    ---->  GND
-GPIO 5 ---->  Trig
-GPIO 18---->  Echo
+GPIO 3 ---->  Trig
+GPIO 1---->  Echo
 ```
 
 Note: You can modify the pin assignments in the code if needed:
 ```cpp
-const int trigPin = 5;
-const int echoPin = 18;
+const int trigPin = 3;
+const int echoPin = 1;
 ```
 
 ## Software Setup
