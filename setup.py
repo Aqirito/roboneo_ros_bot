@@ -5,7 +5,7 @@ package_name = 'roboneo_bot'
 setup(
     name=package_name,
     version='0.0.0',
-    packages=find_packages(exclude=['test']),
+    packages=find_packages(),
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -23,6 +23,7 @@ setup(
             'led_state_pub = roboneo_bot.led_state_pub:main',
             'hello_sub = roboneo_bot.hello_sub:main',
             'ultrasonic_sub = roboneo_bot.ultrasonic_sub:main',
+            'test_roboneo_bot = roboneo_bot.test_roboneo_bot:main',
         ],
     },
 )
