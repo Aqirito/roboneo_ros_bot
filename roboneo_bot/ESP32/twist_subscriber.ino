@@ -77,29 +77,29 @@ void controlMotors(float linear_x, float angular_z) {
   if (left_pwm > 0) {
     digitalWrite(LEFT_MOTOR_PIN1, HIGH);
     digitalWrite(LEFT_MOTOR_PIN2, LOW);
-    // ledcWrite(LEFT_MOTOR_CHANNEL, left_pwm); // Uncomment for PWM control
+    ledcWrite(LEFT_MOTOR_CHANNEL, left_pwm); // Uncomment for PWM control
   } else if (left_pwm < 0) {
     digitalWrite(LEFT_MOTOR_PIN1, LOW);
     digitalWrite(LEFT_MOTOR_PIN2, HIGH);
-    // ledcWrite(LEFT_MOTOR_CHANNEL, -left_pwm); // Uncomment for PWM control
+    ledcWrite(LEFT_MOTOR_CHANNEL, -left_pwm); // Uncomment for PWM control
   } else {
     digitalWrite(LEFT_MOTOR_PIN1, LOW);
     digitalWrite(LEFT_MOTOR_PIN2, LOW);
-    // ledcWrite(LEFT_MOTOR_CHANNEL, 0); // Uncomment for PWM control
+    ledcWrite(LEFT_MOTOR_CHANNEL, 0); // Uncomment for PWM control
   }
   
   if (right_pwm > 0) {
     digitalWrite(RIGHT_MOTOR_PIN1, HIGH);
     digitalWrite(RIGHT_MOTOR_PIN2, LOW);
-    // ledcWrite(RIGHT_MOTOR_CHANNEL, right_pwm); // Uncomment for PWM control
+    ledcWrite(RIGHT_MOTOR_CHANNEL, right_pwm); // Uncomment for PWM control
   } else if (right_pwm < 0) {
     digitalWrite(RIGHT_MOTOR_PIN1, LOW);
     digitalWrite(RIGHT_MOTOR_PIN2, HIGH);
-    // ledcWrite(RIGHT_MOTOR_CHANNEL, -right_pwm); // Uncomment for PWM control
+    ledcWrite(RIGHT_MOTOR_CHANNEL, -right_pwm); // Uncomment for PWM control
   } else {
     digitalWrite(RIGHT_MOTOR_PIN1, LOW);
     digitalWrite(RIGHT_MOTOR_PIN2, LOW);
-    // ledcWrite(RIGHT_MOTOR_CHANNEL, 0); // Uncomment for PWM control
+    ledcWrite(RIGHT_MOTOR_CHANNEL, 0); // Uncomment for PWM control
   }
   
   Serial.print("Left motor: ");
@@ -184,10 +184,10 @@ void setup() {
   pinMode(RIGHT_MOTOR_PIN2, OUTPUT);
   
   // Initialize PWM channels (uncomment for PWM control)
-  // ledcSetup(LEFT_MOTOR_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
-  // ledcAttachPin(LEFT_MOTOR_PIN1, LEFT_MOTOR_CHANNEL);
-  // ledcSetup(RIGHT_MOTOR_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
-  // ledcAttachPin(RIGHT_MOTOR_PIN1, RIGHT_MOTOR_CHANNEL);
+  ledcSetup(LEFT_MOTOR_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttachPin(LEFT_MOTOR_PIN1, LEFT_MOTOR_CHANNEL);
+  ledcSetup(RIGHT_MOTOR_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttachPin(RIGHT_MOTOR_PIN1, RIGHT_MOTOR_CHANNEL);
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
