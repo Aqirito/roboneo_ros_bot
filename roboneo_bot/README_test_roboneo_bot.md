@@ -48,10 +48,10 @@ This Python script tests both the subscriber and publisher functionality of the 
 ## Test Sequence
 
 The test script sends the following sequence of commands:
-1. Move forward (linear.x = 0.5, angular.z = 0.0) for 2 seconds
-2. Turn left (linear.x = 0.0, angular.z = 0.5) for 2 seconds
-3. Move backward (linear.x = -0.5, angular.z = 0.0) for 2 seconds
-4. Turn right (linear.x = 0.0, angular.z = -0.5) for 2 seconds
+1. Move forward (linear.x = 0.7, angular.z = 0.0) for 2 seconds
+2. Turn left (linear.x = 0.0, angular.z = 0.7) for 2 seconds
+3. Move backward (linear.x = -0.7, angular.z = 0.0) for 2 seconds
+4. Turn right (linear.x = 0.0, angular.z = -0.7) for 2 seconds
 5. Stop (linear.x = 0.0, angular.z = 0.0) for 1 second
 
 After sending these commands, the script continues to run and display distance measurements.
@@ -66,7 +66,7 @@ After sending these commands, the script continues to run and display distance m
 - The robot should stop
 
 ### Distance Data
-- Distance measurements should be continuously displayed in the terminal
+- Distance measurements displayed in the terminal for 10 times
 - Values should change as objects move closer to or farther from the ultrasonic sensor
 
 ## Troubleshooting

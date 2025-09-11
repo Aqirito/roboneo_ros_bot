@@ -46,26 +46,39 @@ def main(args=None):
     try:
         # Move forward
         tester.send_twist_command(0.7, 0.0)
-        time.sleep(2)
+        time.sleep(3)
         
         # Turn left
         tester.send_twist_command(0.0, 0.7)
-        time.sleep(2)
+        time.sleep(3)
         
         # Move backward
         tester.send_twist_command(-0.7, 0.0)
-        time.sleep(2)
+        time.sleep(3)
         
         # Turn right
         tester.send_twist_command(0.0, -0.7)
-        time.sleep(2)
+        time.sleep(3)
+
+        # Move forward while turning left
+        tester.send_twist_command(0.7, 0.7)
+        time.sleep(3)
+
+        # Move backward while turning right
+        tester.send_twist_command(-0.7, 0.7)
+        time.sleep(3)
+
+        # Move backward while turning left
+        tester.send_twist_command(-0.7, -0.7)
+        time.sleep(3)
+
+        # Diagonal movement
+        tester.send_twist_command(1.0, 0.7)
+        time.sleep(3)
         
         # Stop
         tester.send_twist_command(0.0, 0.0)
         time.sleep(1)
-        
-        # # Keep the node running to receive distance data
-        # rclpy.spin(tester)
 
         # receive distance data for 10 times
         for _ in range(10):
