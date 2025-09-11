@@ -41,6 +41,12 @@ cd ~/microros_ws
 # Clone micro-ROS setup tools
 git clone -b jazzy https://github.com/micro-ROS/micro_ros_setup.git src/micro_ros_setup
 
+# Clone roboneo_bot package and teleop_twist_keyboard
+git clone -b jazzy https://github.com/Aqirito/roboneo_ros_bot.git src/roboneo_bot
+
+# Optional: Clone teleop_twist_keyboard for manual control
+git clone -b dashing https://github.com/ros2/teleop_twist_keyboard.git src/teleop_twist_keyboard
+
 # Install dependencies
 sudo apt update && rosdep update
 rosdep install --from-paths src --ignore-src -y
