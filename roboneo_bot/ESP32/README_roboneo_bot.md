@@ -26,8 +26,8 @@ This Arduino sketch combines both a subscriber for `geometry_msgs/Twist` message
 ```
 ESP32         HC-SR04        Motor Driver     Motors
 ----------------------------------------------------
-GPIO 3   ---> Trig          IN1 (Left)  ---> Left Motor
-GPIO 1   ---> Echo          IN2 (Left)
+GPIO 25   ---> Trig          IN1 (Left)  ---> Left Motor
+GPIO 26   ---> Echo          IN2 (Left)
 GPIO 16  --->               IN3 (Right) ---> Right Motor
 GPIO 17  --->               IN4 (Right)
 GPIO 2   ---> LED           5V          ---> 5V (Logic)
@@ -44,8 +44,8 @@ Note: The motor driver power connections are not shown. You'll need to connect:
 You can modify the pin assignments in the code if needed:
 ```cpp
 // HC-SR04 Ultrasonic Sensor pins
-const int trigPin = 3;
-const int echoPin = 1;
+const int trigPin = 25;
+const int echoPin = 26;
 
 // Motor control pins
 #define LEFT_MOTOR_PIN1 16

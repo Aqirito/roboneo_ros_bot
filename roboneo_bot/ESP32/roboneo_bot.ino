@@ -20,8 +20,8 @@ const char* host_ip = "192.168.1.100";  // Change to your PC's IP
 const int host_port = 8888;
 
 // HC-SR04 Ultrasonic Sensor pins
-const int trigPin = 3;
-const int echoPin = 1;
+const int trigPin = 25;
+const int echoPin = 26;
 
 // LED pin to indicate connection status
 #define LED_PIN 2
@@ -257,6 +257,8 @@ void destroy_entities() {
 
 void setup() {
   Serial.begin(115200);
+  delay(2000); // Wait for serial monitor to connect
+  Serial.println("Starting roboneo_bot...");
   pinMode(LED_PIN, OUTPUT);
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
