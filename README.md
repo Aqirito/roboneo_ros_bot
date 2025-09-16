@@ -97,8 +97,8 @@ ESP32         HC-SR04
 ---------------------
 5V     ---->  VCC
 GND    ---->  GND
-GPIO 3 ---->  Trig
-GPIO 1 ---->  Echo
+GPIO 25 ---->  Trig
+GPIO 26 ---->  Echo
 ```
 
 #### Motor Driver (L298N) Connections:
