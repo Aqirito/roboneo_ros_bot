@@ -23,6 +23,7 @@ setup(
             'led_state_pub = roboneo_bot.led_state_pub:main',
             'hello_sub = roboneo_bot.hello_sub:main',
             'ultrasonic_sub = roboneo_bot.ultrasonic_sub:main',
+            'roboneo_bot = roboneo_bot.roboneo_bot:main',
             'test_roboneo_bot = roboneo_bot.test_roboneo_bot:main',
         ],
     },
