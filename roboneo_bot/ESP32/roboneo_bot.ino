@@ -10,7 +10,6 @@
 #include <geometry_msgs/msg/twist.h>
 #include <std_msgs/msg/float32.h>
 
-
 // WiFi credentials
 const char* ssid = "YOUR_WIFI_SSID";
 const char* password = "YOUR_WIFI_PASSWORD";
@@ -27,10 +26,10 @@ const int echoPin = 26;
 #define LED_PIN 2
 
 // Motor control pins (example pins, adjust as needed for your hardware)
-#define LEFT_MOTOR_PIN1 16
-#define LEFT_MOTOR_PIN2 17
-#define RIGHT_MOTOR_PIN1 18
-#define RIGHT_MOTOR_PIN2 19
+#define LEFT_MOTOR_PIN1 12
+#define LEFT_MOTOR_PIN2 13
+#define RIGHT_MOTOR_PIN1 14
+#define RIGHT_MOTOR_PIN2 27
 
 // PWM channels for motor speed control
 #define LEFT_MOTOR_CHANNEL 0
@@ -57,7 +56,12 @@ enum states {
   AGENT_DISCONNECTED
 } state;
 
-// Function to read distance from HC-SR04 sensor
+// Global variables for non-blocking operation
+volatile float last_distance = 0.0;
+volatile bool new_twist_received = false;
+volatile unsigned long last_motor_update = 0;
+
+// Function to read distance from HC-SR04 sensor (non-blocking)
 float readDistance() {
   // Send trigger pulse
   digitalWrite(trigPin, LOW);
@@ -66,16 +70,21 @@ float readDistance() {
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
   
-  // Read echo pulse duration
-  long duration = pulseIn(echoPin, HIGH);
-  
+  // Non-blocking echo reading with timeout
+  unsigned long start_time = micros();
+  while (digitalRead(echoPin) == LOW && (micros() - start_time) < 50000UL); // Wait for HIGH or timeout (50ms)
+
+  start_time = micros();
+  while (digitalRead(echoPin) == HIGH && (micros() - start_time) < 50000UL); // Wait for LOW or timeout
+
+  long duration = micros() - start_time;
+
   // Calculate distance in centimeters
-  // Speed of sound = 343 m/s = 0.0343 cm/microsecond
-  // Distance = (duration * speed of sound) / 2
-  // Distance = (duration * 0.0343) / 2 = duration * 0.01715
-  float distance = duration * 0.01715;
-  
-  return distance;
+  if (duration > 0 && duration < 50000) {
+    return duration * 0.01715f;
+  } else {
+    return -1.0f; // Timeout or invalid reading
+  }
 }
 
 // Helper macro for periodic execution
@@ -100,8 +109,8 @@ void controlMotors(float linear_x, float angular_z) {
   }
   
   // Convert to PWM values (0-255)
-  int left_pwm = (int)(left_speed * 255);
-  int right_pwm = (int)(right_speed * 255);
+  int left_pwm = (int)(left_speed * 127);
+  int right_pwm = (int)(right_speed * 127);
   
   // Apply motor control with PWM
   if (left_pwm > 0) {
@@ -142,11 +151,8 @@ void controlMotors(float linear_x, float angular_z) {
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
   (void) last_call_time;
   if (timer != NULL) {
-    // Read distance from ultrasonic sensor
-    float distance = readDistance();
-    
-    // Set message data
-    distance_msg.data = distance;
+    // Publish the last known distance
+    distance_msg.data = last_distance;
     
     // Publish message
     rcl_ret_t ret = rcl_publish(&publisher, &distance_msg, NULL);
@@ -154,7 +160,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
       Serial.println("Failed to publish distance message");
     } else {
       Serial.print("Published distance: ");
-      Serial.print(distance);
+      Serial.print(last_distance);
       Serial.println(" cm");
     }
   }
@@ -164,18 +170,21 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
 void subscription_callback(const void * msgin) {
   const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
   
-  // Extract linear and angular components
-  float linear_x = msg->linear.x;
-  float angular_z = msg->angular.z;
+  // Copy the received values
+  twist_msg.linear.x = msg->linear.x;
+  twist_msg.angular.z = msg->angular.z;
   
-  // Control motors based on Twist message
-  controlMotors(linear_x, angular_z);
+  new_twist_received = true;
+  last_motor_update = millis();
+  
+  // Control motors immediately when new command received
+  controlMotors(twist_msg.linear.x, twist_msg.angular.z);
   
   // Print received values
   Serial.print("Received Twist - Linear X: ");
-  Serial.print(linear_x);
+  Serial.print(twist_msg.linear.x);
   Serial.print(", Angular Z: ");
-  Serial.println(angular_z);
+  Serial.println(twist_msg.angular.z);
 }
 
 // Create ROS entities
@@ -210,8 +219,8 @@ bool create_entities() {
     return false;
   }
 
-  // Create timer for distance data (publish every 1000 milliseconds)
-  const unsigned int timer_timeout = 1000;
+  // Create timer for distance data (publish every 100 milliseconds)
+  const unsigned int timer_timeout = 100;
   if (rclc_timer_init_default2(
       &timer,
       &support,
@@ -257,7 +266,7 @@ void destroy_entities() {
 
 void setup() {
   Serial.begin(115200);
-  delay(2000); // Wait for serial monitor to connect
+  delay(1000); // Wait for serial monitor to connect
   Serial.println("Starting roboneo_bot...");
   pinMode(LED_PIN, OUTPUT);
   pinMode(trigPin, OUTPUT);
@@ -274,6 +283,12 @@ void setup() {
   ledcAttachPin(LEFT_MOTOR_PIN1, LEFT_MOTOR_CHANNEL);
   ledcSetup(RIGHT_MOTOR_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
   ledcAttachPin(RIGHT_MOTOR_PIN1, RIGHT_MOTOR_CHANNEL);
+
+  // Set static IP for better WiFi stability (optional)
+  // IPAddress local_IP(192, 168, 0, 188);
+  // IPAddress gateway(192, 168, 0, 1);
+  // IPAddress subnet(255, 255, 255, 0);
+  // WiFi.config(local_IP, gateway, subnet);
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
@@ -294,12 +309,16 @@ void setup() {
   
   // Small delay to ensure transport is properly initialized
   delay(1000);
+  
+  // Initialize twist message
+  twist_msg.linear.x = 0.0;
+  twist_msg.angular.z = 0.0;
 }
 
 void loop() {
   switch (state) {
     case WAITING_AGENT:
-      EXECUTE_EVERY_N_MS(2000,
+      EXECUTE_EVERY_N_MS(500,
         state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;
       );
       break;
@@ -316,11 +335,26 @@ void loop() {
       break;
 
     case AGENT_CONNECTED:
-      EXECUTE_EVERY_N_MS(3000,
+      // Read ultrasonic sensor periodically (non-blocking)
+      EXECUTE_EVERY_N_MS(100, {
+        float d = readDistance();
+        if (d >= 0) {
+          last_distance = d;
+        }
+      });
+
+      // Check agent connection more frequently
+      EXECUTE_EVERY_N_MS(500,
         state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;
       );
-      if (state == AGENT_CONNECTED) {
-        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+
+      // Spin the executor for ROS communication
+      rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
+      
+      // Ensure motors are updated regularly (every 50ms)
+      if (millis() - last_motor_update > 50) {
+        controlMotors(twist_msg.linear.x, twist_msg.angular.z);
+        last_motor_update = millis();
       }
       break;
 
