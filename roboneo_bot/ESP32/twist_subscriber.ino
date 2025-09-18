@@ -21,10 +21,10 @@ const int host_port = 8888;
 #define LED_PIN 2
 
 // Motor control pins (example pins, adjust as needed for your hardware)
-#define LEFT_MOTOR_PIN1 16
-#define LEFT_MOTOR_PIN2 17
-#define RIGHT_MOTOR_PIN1 18
-#define RIGHT_MOTOR_PIN2 19
+#define LEFT_MOTOR_PIN1 12
+#define LEFT_MOTOR_PIN2 13
+#define RIGHT_MOTOR_PIN1 14
+#define RIGHT_MOTOR_PIN2 27
 
 // PWM channels for motor speed control
 #define LEFT_MOTOR_CHANNEL 0
