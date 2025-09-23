@@ -41,44 +41,41 @@ class RoboneoBotTester(Node):
 def main(args=None):
     rclpy.init(args=args)
     tester = RoboneoBotTester()
+    time.sleep(1)
     
     # Send a series of test commands
     try:
         # Move forward
-        tester.send_twist_command(0.7, 0.0)
-        time.sleep(3)
+        tester.send_twist_command(0.5, 0.0)
+        time.sleep(2)
         
         # Turn left
-        tester.send_twist_command(0.0, 0.7)
-        time.sleep(3)
+        tester.send_twist_command(0.0, 1.0)
+        time.sleep(2)
         
         # Move backward
         tester.send_twist_command(-0.7, 0.0)
-        time.sleep(3)
+        time.sleep(2)
         
         # Turn right
         tester.send_twist_command(0.0, -0.7)
-        time.sleep(3)
+        time.sleep(2)
 
         # Move forward while turning left
         tester.send_twist_command(0.7, 0.7)
-        time.sleep(3)
+        time.sleep(2)
 
-        # Move backward while turning right
-        tester.send_twist_command(-0.7, 0.7)
-        time.sleep(3)
-
-        # Move backward while turning left
-        tester.send_twist_command(-0.7, -0.7)
-        time.sleep(3)
+        # Move forward while turning right
+        tester.send_twist_command(0.7, -0.7)
+        time.sleep(2)
 
         # Diagonal movement
         tester.send_twist_command(1.0, 0.7)
-        time.sleep(3)
+        time.sleep(2)
         
         # Stop
         tester.send_twist_command(0.0, 0.0)
-        time.sleep(1)
+        time.sleep(2)
 
         # receive distance data for 10 times
         for _ in range(10):
