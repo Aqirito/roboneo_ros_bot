@@ -24,6 +24,8 @@ setup(
             'hello_sub = roboneo_bot.hello_sub:main',
             'ultrasonic_sub = roboneo_bot.ultrasonic_sub:main',
             'roboneo_bot = roboneo_bot.roboneo_bot:main',
+            'roboneo_bot_sonic_twist = roboneo_bot.roboneo_bot_sonic_twist:main',
+            'roboneo_bot_sonic_lidar_twist = roboneo_bot.roboneo_bot_sonic_lidar_twist:main',
             'test_roboneo_bot = roboneo_bot.test_roboneo_bot:main',
         ],
     },
