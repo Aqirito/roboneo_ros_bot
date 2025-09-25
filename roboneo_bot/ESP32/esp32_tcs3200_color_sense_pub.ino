@@ -12,19 +12,21 @@
 #include <std_msgs/msg/color_rgba.h>
 
 // ESP32 Pins
-#define S0_PIN 25    // (I2C SCL)
-#define S1_PIN 26    // (I2C SDA)  
-#define S2_PIN 19
-#define S3_PIN 18   
-#define OUT_PIN 34   
+#define S0_PIN 16    // (I2C SCL) – actually used for TCS3200 frequency
+#define S1_PIN 17    // (I2C SDA) – actually used for TCS3200 frequency
+#define S2_PIN 39
+#define S3_PIN 32
+#define OUT_PIN 33
 
 // LED pin to indicate connection status
-#define LED_PIN 27   
+#define LED_PIN 35
 
+// 353,319,318 
+// 680,628,626
 // Calibration ranges (update after measuring raw values)
-long R_min = 503, R_max = 1268;
-long G_min = 521, G_max = 1336;
-long B_min = 443, B_max = 1151;
+long R_min = 353, R_max = 680;
+long G_min = 319, G_max = 628;
+long B_min = 318, B_max = 626;
 
 // WiFi credentials
 const char* ssid = "smartspacekk";
@@ -35,21 +37,18 @@ const char* host_ip = "192.168.0.108";  // Change to your PC's IP
 const int host_port = 8888;
 
 // Color palette (0-255 RGB)
-struct Color { 
-  const char* name; 
-  int r, g, b; 
+struct Color {
+  const char* name;
+  int r, g, b;
 };
 
 Color palette[] = {
   {"Red",     255,   0,   0},
-  {"Green",     0, 255,   0},
-  {"Blue",      0,   0, 255},
-  {"White",   255, 255, 255},
   {"Black",     0,   0,   0},
-  {"Yellow",  255, 255,   0},
-  {"Cyan",      0, 255, 255},
-  {"Magenta", 255,   0, 255},
-  {"Orange",  255, 165,   0},
+  // {"Green",     0, 255,   0},
+  // {"Blue",      0,   0, 255},
+  {"White",   255, 255, 255},
+  // {"Yellow",  255, 255,   0},
 };
 
 const int PALETTE_SIZE = sizeof(palette)/sizeof(palette[0]);
@@ -60,9 +59,11 @@ rcl_allocator_t allocator;
 rcl_node_t node;
 rcl_publisher_t color_name_publisher;
 rcl_publisher_t color_rgb_publisher;
+rcl_publisher_t raw_rgb_publisher;
 rcl_timer_t timer;
 rclc_executor_t executor;
 std_msgs__msg__String color_name_msg;
+std_msgs__msg__String raw_rgb_msg;
 std_msgs__msg__ColorRGBA color_rgb_msg;
 
 // Connection state management
@@ -75,7 +76,12 @@ enum states {
 
 // Global variables for non-blocking operation
 volatile int last_r = 0, last_g = 0, last_b = 0;
-volatile String last_color_name = "Unknown";
+String last_color_name = "Unknown";
+
+// Raw readings
+long r_raw = 0;
+long g_raw = 0;
+long b_raw = 0;
 
 // Helper macro for periodic execution
 #define EXECUTE_EVERY_N_MS(MS, X) do { \
@@ -85,7 +91,7 @@ volatile String last_color_name = "Unknown";
 } while (0)
 
 long readColor(byte s2, byte s3) {
-  digitalWrite(S2_PIN, s2); 
+  digitalWrite(S2_PIN, s2);
   digitalWrite(S3_PIN, s3);
   delay(10); // stabilize output
   long val = pulseIn(OUT_PIN, LOW, 2000000UL); // raw pulse in microseconds
@@ -93,18 +99,18 @@ long readColor(byte s2, byte s3) {
 }
 
 String closestColor(int r, int g, int b) {
-  float bestDist = 1e6; 
+  float bestDist = 1e6;
   const char* best = "Unknown";
-  
+
   for(int i = 0; i < PALETTE_SIZE; i++) {
     float dr = r - palette[i].r;
     float dg = g - palette[i].g;
     float db = b - palette[i].b;
     float dist = sqrt(dr*dr + dg*dg + db*db);
-    
-    if(dist < bestDist) { 
-      bestDist = dist; 
-      best = palette[i].name; 
+
+    if(dist < bestDist) {
+      bestDist = dist;
+      best = palette[i].name;
     }
   }
   return String(best);
@@ -112,9 +118,9 @@ String closestColor(int r, int g, int b) {
 
 void readColorSensor() {
   // Raw readings
-  long r_raw = readColor(LOW, LOW);
-  long g_raw = readColor(HIGH, HIGH);
-  long b_raw = readColor(LOW, HIGH);
+  r_raw = readColor(LOW, LOW);
+  g_raw = readColor(HIGH, HIGH);
+  b_raw = readColor(LOW, HIGH);
 
   // Map raw readings to 0-255
   int r = constrain(map(r_raw, R_min, R_max, 255, 0), 0, 255);
@@ -141,32 +147,44 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
     color_name_msg.data.size = last_color_name.length();
     color_name_msg.data.capacity = last_color_name.length() + 1;
 
-    // Prepare RGB color message
-    color_rgb_msg.r = last_r / 255.0f;  // Normalize to 0-1
+    // Prepare RGB color message (normalized to 0.0–1.0)
+    color_rgb_msg.r = last_r / 255.0f;
     color_rgb_msg.g = last_g / 255.0f;
     color_rgb_msg.b = last_b / 255.0f;
-    color_rgb_msg.a = 1.0f;  // Alpha (opacity)
+    color_rgb_msg.a = 1.0f;
 
-    // Publish color name
-    rcl_ret_t ret1 = rcl_publish(&color_name_publisher, &color_name_msg, NULL);
-    if (ret1 != RCL_RET_OK) {
+    // Prepare raw RGB as a string: "r,g,b"
+    char raw_buffer[64];
+    snprintf(raw_buffer, sizeof(raw_buffer), "%ld,%ld,%ld", r_raw, g_raw, b_raw);
+    raw_rgb_msg.data.data = raw_buffer;
+    raw_rgb_msg.data.size = strlen(raw_buffer);
+    raw_rgb_msg.data.capacity = sizeof(raw_buffer);
+
+    // Publish messages
+    rcl_ret_t ret_raw = rcl_publish(&raw_rgb_publisher, &raw_rgb_msg, NULL);
+    rcl_ret_t ret_name = rcl_publish(&color_name_publisher, &color_name_msg, NULL);
+    rcl_ret_t ret_rgb = rcl_publish(&color_rgb_publisher, &color_rgb_msg, NULL);
+
+    if (ret_raw != RCL_RET_OK) {
+      Serial.println("Failed to publish raw rgb message");
+    }
+    if (ret_name != RCL_RET_OK) {
       Serial.println("Failed to publish color name message");
     }
-
-    // Publish RGB values
-    rcl_ret_t ret2 = rcl_publish(&color_rgb_publisher, &color_rgb_msg, NULL);
-    if (ret2 != RCL_RET_OK) {
+    if (ret_rgb != RCL_RET_OK) {
       Serial.println("Failed to publish color RGB message");
     }
 
-    if (ret1 == RCL_RET_OK && ret2 == RCL_RET_OK) {
-      Serial.printf("Published: %s RGB(%.2f,%.2f,%.2f)\n", 
-                    last_color_name.c_str(), 
-                    color_rgb_msg.r, color_rgb_msg.g, color_rgb_msg.b);
+    if (ret_raw == RCL_RET_OK && ret_name == RCL_RET_OK && ret_rgb == RCL_RET_OK) {
+      Serial.printf("Published: %s RGB(%.2f,%.2f,%.2f) Raw(%ld,%ld,%ld)\n",
+                    last_color_name.c_str(),
+                    color_rgb_msg.r, color_rgb_msg.g, color_rgb_msg.b,
+                    r_raw, g_raw, b_raw);
     }
   }
-}// 
-Create ROS entities
+}
+
+// Create ROS entities
 bool create_entities() {
   allocator = rcl_get_default_allocator();
 
@@ -189,7 +207,16 @@ bool create_entities() {
     return false;
   }
 
-  // Create publisher for RGB values
+  // Create publisher for raw RGB (as string)
+  if (rclc_publisher_init_default(
+      &raw_rgb_publisher,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
+      "/color_sensor/raw_rgb") != RCL_RET_OK) {
+    return false;
+  }
+
+  // Create publisher for normalized RGB (ColorRGBA)
   if (rclc_publisher_init_default(
       &color_rgb_publisher,
       &node,
@@ -198,14 +225,13 @@ bool create_entities() {
     return false;
   }
 
-  // Create timer for color data (publish every 200 milliseconds)
+  // Create timer (publish every 200 ms)
   const unsigned int timer_timeout = 200;
-  if (rclc_timer_init_default2(
+  if (rclc_timer_init_default(
       &timer,
       &support,
       RCL_MS_TO_NS(timer_timeout),
-      timer_callback,
-      true) != RCL_RET_OK) {
+      timer_callback) != RCL_RET_OK) {
     return false;
   }
 
@@ -224,34 +250,31 @@ bool create_entities() {
 
 // Destroy ROS entities
 void destroy_entities() {
-  rmw_context_t * rmw_context = rcl_context_get_rmw_context(&support.context);
-  (void) rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
-  (void) rcl_publisher_fini(&color_name_publisher, &node);
-  (void) rcl_publisher_fini(&color_rgb_publisher, &node);
-  (void) rcl_timer_fini(&timer);
+  rcl_publisher_fini(&raw_rgb_publisher, &node);
+  rcl_publisher_fini(&color_name_publisher, &node);
+  rcl_publisher_fini(&color_rgb_publisher, &node);
+  rcl_timer_fini(&timer);
   rclc_executor_fini(&executor);
-  (void) rcl_node_fini(&node);
+  rcl_node_fini(&node);
   rclc_support_fini(&support);
-  
-  // Small delay to ensure proper cleanup
   delay(100);
 }
 
 void setup() {
   Serial.begin(115200);
-  delay(1000); // Wait for serial monitor to connect
+  delay(1000);
   Serial.println("Starting roboneo_bot color sensor...");
-  
+
   // Initialize pins
   pinMode(LED_PIN, OUTPUT);
-  pinMode(S0_PIN, OUTPUT); 
+  pinMode(S0_PIN, OUTPUT);
   pinMode(S1_PIN, OUTPUT);
-  pinMode(S2_PIN, OUTPUT); 
+  pinMode(S2_PIN, OUTPUT);
   pinMode(S3_PIN, OUTPUT);
   pinMode(OUT_PIN, INPUT);
 
-  // Frequency scaling 20%
-  digitalWrite(S0_PIN, HIGH); 
+  // Set TCS3200 frequency scaling to 20%
+  digitalWrite(S0_PIN, HIGH);
   digitalWrite(S1_PIN, LOW);
 
   // Connect to WiFi
@@ -260,29 +283,27 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.print(".");
-    digitalWrite(LED_PIN, !digitalRead(LED_PIN)); // Blink LED while connecting
+    digitalWrite(LED_PIN, !digitalRead(LED_PIN));
   }
   Serial.println();
   Serial.print("Connected to WiFi. IP: ");
   Serial.println(WiFi.localIP());
 
-  // Set micro-ROS WiFi transport
+  // Set micro-ROS transport
   set_microros_wifi_transports((char*)ssid, (char*)password, (char*)host_ip, host_port);
 
   state = WAITING_AGENT;
-  
-  // Small delay to ensure transport is properly initialized
   delay(1000);
-  
+
   Serial.println("ESP32 TCS3200 Color Sensor - ROS2 Publisher Ready");
 }
 
 void loop() {
   switch (state) {
     case WAITING_AGENT:
-      EXECUTE_EVERY_N_MS(500,
+      EXECUTE_EVERY_N_MS(500, {
         state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;
-      );
+      });
       break;
 
     case AGENT_AVAILABLE:
@@ -297,17 +318,14 @@ void loop() {
       break;
 
     case AGENT_CONNECTED:
-      // Read color sensor periodically (non-blocking)
       EXECUTE_EVERY_N_MS(200, {
         readColorSensor();
       });
 
-      // Check agent connection
-      EXECUTE_EVERY_N_MS(500,
+      EXECUTE_EVERY_N_MS(500, {
         state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;
-      );
+      });
 
-      // Spin the executor for ROS communication
       rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
       break;
 
@@ -321,8 +339,6 @@ void loop() {
       break;
   }
 
-  // LED indicates connection status
   digitalWrite(LED_PIN, (state == AGENT_CONNECTED) ? HIGH : LOW);
-
   delay(10);
 }
