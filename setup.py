@@ -27,6 +27,7 @@ setup(
             'roboneo_bot_sonic_twist = roboneo_bot.roboneo_bot_sonic_twist:main',
             'roboneo_bot_sonic_lidar_twist = roboneo_bot.roboneo_bot_sonic_lidar_twist:main',
             'test_roboneo_bot = roboneo_bot.test_roboneo_bot:main',
+            'roboneo_test_lidar = roboneo_bot.roboneo_test_lidar:main',
         ],
     },
 )

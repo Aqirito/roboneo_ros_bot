@@ -60,7 +60,7 @@ class RoboneoBotTester(Node):
         self.state = RobotState.IDLE
 
         self.lidar_distance = 0.0
-        self.stage_level = StageLevel.LEVEL_3  # Change this to LEVEL_2 for normal mode
+        self.stage_level = StageLevel.LEVEL_1  # Change this to LEVEL_2 for normal mode
         
         # Timer for non-blocking delays
         self.timer = None
@@ -157,7 +157,7 @@ class RoboneoBotTester(Node):
                 self.measure_left_start()
             # Continue forward if no obstacle and not scanning
             elif self.distance > 20.0:
-                self.send_twist_command(0.8, 0.0)  # Move forward
+                self.send_twist_command(1.0, 0.0)  # Move forward
 
     def handle_normal_mode_logic(self):
         """
@@ -180,7 +180,7 @@ class RoboneoBotTester(Node):
             self.state = RobotState.OBSTACLE_DETECTED
             self.measure_left_start()
         elif self.state == RobotState.IDLE and self.distance > 20.0:
-            self.send_twist_command(0.8, 0.0)  # Move forward
+            self.send_twist_command(1.0, 0.0)  # Move forward
 
     def update_behavior(self):
         """
@@ -271,7 +271,7 @@ class RoboneoBotTester(Node):
         self.destroy_timer_or_cancel()
         self.send_twist_command(0.0, 0.0)
         self.get_logger().info("🚀 Resuming forward movement.")
-        self.send_twist_command(0.8, 0.0)  # Move forward
+        self.send_twist_command(1.0, 0.0)  # Move forward
         self.reset_state()
 
     def reset_state(self):
@@ -311,7 +311,7 @@ class RoboneoBotTester(Node):
         self.scan_start_time = self.get_clock().now()
         
         # Start rotating slowly
-        self.send_twist_command(0.0, 0.8)  # Slow rotation
+        self.send_twist_command(0.0, 0.7)  # Slow rotation
         self.state = RobotState.PILLAR_SCANNING
 
     def check_pillar_scan_complete(self):
@@ -346,9 +346,9 @@ class RoboneoBotTester(Node):
         """
         Check for pillar during scanning rotation
         """
-        # if (self.state == RobotState.PILLAR_SCANNING and 
-        #     40.0 <= self.lidar_distance <= 50.0):
-        if (self.state == RobotState.PILLAR_SCANNING and self.lidar_distance <= 60.0):
+        if (self.state == RobotState.PILLAR_SCANNING and 
+            100.0 <= self.lidar_distance <= 120.0):
+        # if (self.state == RobotState.PILLAR_SCANNING and self.lidar_distance <= 50.0):
             self.pillar_detected = True
             self.pillar_distance = self.lidar_distance
             self.get_logger().info(f'🟠 Pillar detected at {self.lidar_distance:.2f} cm during scan!')
@@ -377,7 +377,7 @@ class RoboneoBotTester(Node):
         """
         Resume forward movement after pillar scan
         """
-        self.send_twist_command(0.8, 0.0)  # Move forward
+        self.send_twist_command(1.0, 0.0)  # Move forward
         self.reset_state()
 
 
