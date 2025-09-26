@@ -5,6 +5,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float32
 import time
+import requests
 
 class RoboneoBotTester(Node):
     def __init__(self):
@@ -38,6 +39,27 @@ class RoboneoBotTester(Node):
     def distance_callback(self, msg):
         self.get_logger().info(f'Received distance: {msg.data:.2f} cm')
 
+    def send_http_requests(self, payload):
+        """
+        Send an HTTP POST with json data.
+        example json data: {"key": "value"}
+        """
+        url = 'http://api_url_here/color_detection'
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'x-secret-key': 'secret_key_here'
+            }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=3)
+            if response.status_code == 200:
+                self.get_logger().info(f'HTTP POST to {url} succeeded: {response.text}')
+            else:
+                self.get_logger().error(f'HTTP POST to {url} failed with status code {response.status_code}')
+        except Exception as e:
+            self.get_logger().error(f'HTTP POST to {url} failed: {e}')
+
 def main(args=None):
     rclpy.init(args=args)
     tester = RoboneoBotTester()
@@ -46,7 +68,8 @@ def main(args=None):
     # Send a series of test commands
     try:
         # Move forward
-        tester.send_twist_command(0.5, 0.0)
+        tester.send_twist_command(0.7, 0.0)
+        tester.send_http_requests({"key": "value"})
         time.sleep(2)
         
         # Turn left
@@ -67,10 +90,6 @@ def main(args=None):
 
         # Move forward while turning right
         tester.send_twist_command(0.7, -0.7)
-        time.sleep(2)
-
-        # Diagonal movement
-        tester.send_twist_command(1.0, 0.7)
         time.sleep(2)
         
         # Stop
