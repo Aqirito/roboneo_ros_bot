@@ -86,7 +86,6 @@ rcl_publisher_t lidar_publisher;
 rcl_publisher_t ultrasonic_publisher;
 rcl_publisher_t color_name_publisher;
 rcl_publisher_t color_rgb_publisher;
-rcl_publisher_t raw_rgb_publisher;  // Raw RGB publisher
 rcl_subscription_t subscriber;
 rcl_timer_t lidar_timer;
 rcl_timer_t ultrasonic_timer;
@@ -97,7 +96,6 @@ std_msgs__msg__Float32 lidar_distance_msg;
 std_msgs__msg__Float32 ultrasonic_distance_msg;
 std_msgs__msg__String color_name_msg;
 std_msgs__msg__ColorRGBA color_rgb_msg;
-std_msgs__msg__String raw_rgb_msg;  // Raw RGB message
 
 // Connection state management
 enum states {
@@ -114,11 +112,6 @@ volatile int last_r = 0, last_g = 0, last_b = 0;
 String last_color_name = "Unknown";
 volatile bool new_twist_received = false;
 volatile unsigned long last_motor_update = 0;
-
-// Raw RGB readings
-long r_raw = 0;
-long g_raw = 0;
-long b_raw = 0;
 
 // Helper macro for periodic execution
 #define EXECUTE_EVERY_N_MS(MS, X) do { \
@@ -152,7 +145,7 @@ float readUltrasonicDistance() {
   while (digitalRead(echoPin) == HIGH && (micros() - start_time) < 50000UL); // Wait for LOW or timeout
 
   long duration = micros() - start_time;
-  
+
   // Calculate distance in centimeters
   if (duration > 0 && duration < 50000) {
     return duration * 0.01715f;
@@ -192,9 +185,9 @@ String closestColor(int r, int g, int b) {
 // Function to read color sensor data
 void readColorSensor() {
   // Raw readings
-  r_raw = readColor(LOW, LOW);
-  g_raw = readColor(HIGH, HIGH);
-  b_raw = readColor(LOW, HIGH);
+  long r_raw = readColor(LOW, LOW);
+  long g_raw = readColor(HIGH, HIGH);
+  long b_raw = readColor(LOW, HIGH);
 
   // Map raw readings to 0-255
   int r = constrain(map(r_raw, R_min, R_max, 255, 0), 0, 255);
@@ -318,13 +311,6 @@ void color_timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
     color_rgb_msg.b = last_b / 255.0f;
     color_rgb_msg.a = 1.0f;  // Alpha (opacity)
 
-    // Prepare raw RGB as a string: "r,g,b"
-    char raw_buffer[64];
-    snprintf(raw_buffer, sizeof(raw_buffer), "%ld,%ld,%ld", r_raw, g_raw, b_raw);
-    raw_rgb_msg.data.data = raw_buffer;
-    raw_rgb_msg.data.size = strlen(raw_buffer);
-    raw_rgb_msg.data.capacity = sizeof(raw_buffer);
-
     // Publish color name
     rcl_ret_t ret1 = rcl_publish(&color_name_publisher, &color_name_msg, NULL);
     if (ret1 != RCL_RET_OK) {
@@ -337,17 +323,10 @@ void color_timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
       Serial.println("Failed to publish color RGB message");
     }
 
-    // Publish raw RGB values
-    rcl_ret_t ret3 = rcl_publish(&raw_rgb_publisher, &raw_rgb_msg, NULL);
-    if (ret3 != RCL_RET_OK) {
-      Serial.println("Failed to publish raw RGB message");
-    }
-
-    if (ret1 == RCL_RET_OK && ret2 == RCL_RET_OK && ret3 == RCL_RET_OK) {
-      Serial.printf("Published: %s RGB(%.2f,%.2f,%.2f) Raw(%ld,%ld,%ld)\n",
+    if (ret1 == RCL_RET_OK && ret2 == RCL_RET_OK) {
+      Serial.printf("Published: %s RGB(%.2f,%.2f,%.2f)\n",
                     last_color_name.c_str(),
-                    color_rgb_msg.r, color_rgb_msg.g, color_rgb_msg.b,
-                    r_raw, g_raw, b_raw);
+                    color_rgb_msg.r, color_rgb_msg.g, color_rgb_msg.b);
     }
   }
 }
@@ -432,15 +411,6 @@ bool create_entities() {
     return false;
   }
 
-  // Create publisher for raw RGB (as string)
-  if (rclc_publisher_init_default(
-      &raw_rgb_publisher,
-      &node,
-      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
-      "/color_sensor/raw_rgb") != RCL_RET_OK) {
-    return false;
-  }
-
   // Create timer for LiDAR distance data (publish every 100 milliseconds)
   const unsigned int lidar_timer_timeout = 100;
   if (rclc_timer_init_default2(
@@ -512,7 +482,6 @@ void destroy_entities() {
   (void) rcl_publisher_fini(&ultrasonic_publisher, &node);
   (void) rcl_publisher_fini(&color_name_publisher, &node);
   (void) rcl_publisher_fini(&color_rgb_publisher, &node);
-  (void) rcl_publisher_fini(&raw_rgb_publisher, &node);
   (void) rcl_timer_fini(&lidar_timer);
   (void) rcl_timer_fini(&ultrasonic_timer);
   (void) rcl_timer_fini(&color_timer);
