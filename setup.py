@@ -30,6 +30,7 @@ setup(
             'roboneo_test_lidar = roboneo_bot.roboneo_test_lidar:main',
             'roboneo_test_color = roboneo_bot.roboneo_test_color:main',
             'roboneo_bot_full = roboneo_bot.roboneo_bot_full:main',
+            'check_config = roboneo_bot.check_config:main',
         ],
     },
 )
