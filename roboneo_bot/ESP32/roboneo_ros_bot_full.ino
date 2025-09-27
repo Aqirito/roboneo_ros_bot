@@ -34,10 +34,9 @@ const int echoPin = 26;
 #define LED_PIN 2
 
 // Calibration ranges for color sensor (update after measuring raw values)
-long R_min = 353, R_max = 680;
-long G_min = 319, G_max = 628;
-long B_min = 318, B_max = 626;
-
+long R_min = 364, R_max = 1136;
+long G_min = 360, G_max = 1103;
+long B_min = 357, B_max = 1091;
 // WiFi credentials
 const char* ssid = "smartspacekk";
 const char* password = "smartspace09";
@@ -66,11 +65,11 @@ struct Color {
 
 Color palette[] = {
   {"Red",     255,   0,   0},
-  // {"Green",     0, 255,   0},
-  // {"Blue",      0,   0, 255},
+  {"Green",     0, 255,   0},
+  {"Blue",      0,   0, 255},
   {"White",   255, 255, 255},
   {"Black",     0,   0,   0},
-  // {"Yellow",  255, 255,   0},
+  {"Yellow",  255, 255,   100},
 //  {"Cyan",      0, 255, 255},
 //  {"Magenta", 255,   0, 255},
 //  {"Orange",  255, 165,   0},
