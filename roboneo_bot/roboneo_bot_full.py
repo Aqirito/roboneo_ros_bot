@@ -29,6 +29,7 @@ class RobotState(IntEnum):
     PILLAR_SCAN_COMPLETE = 14       # Finished scanning
     MOVING_TO_PILLAR = 15           # Moving toward detected pillar
     STOPPED = 16                     # Stopped after reaching pillar
+    TURNING_360 = 17                 # Performing 360-degree rotation
 
 
 class StageLevel(IntEnum):
@@ -139,7 +140,12 @@ class RoboneoBotTester(Node):
             case 'Yellow':
                 self.color_name = 'Yellow'
 
-        if self.color_name == 'Blue':
+        if self.color_name == 'Red':
+            self.get_logger().info('🔴 Red detected - Performing 360-degree rotation')
+            self.send_events("Red detected - Performing 360-degree rotation")
+            self.perform_360_rotation()
+            self.color_name = 'Unknown'  # Reset to avoid repeated triggers
+        elif self.color_name == 'Blue':
             self.stage_level = StageLevel.LEVEL_2
             self.get_logger().info('🔵 Blue detected - Switching to Stage Level 2 (Pillar Detection Mode)')
             self.send_events("Blue detected - Switching to Stage Level 2 (Pillar Detection Mode)")
@@ -168,13 +174,13 @@ class RoboneoBotTester(Node):
         if self.state == RobotState.MEASURING_LEFT:
             self.left_distance = self.distance
             self.get_logger().info(f'✅ Left distance captured: {self.left_distance:.2f} cm')
-            self.send_events(f'Left distance captured: {self.left_distance:.2f} cm')
+            # self.send_events(f'Left distance captured: {self.left_distance:.2f} cm')
             self.turn_back_from_left()
 
         elif self.state == RobotState.MEASURING_RIGHT:
             self.right_distance = self.distance
             self.get_logger().info(f'✅ Right distance captured: {self.right_distance:.2f} cm')
-            self.send_events(f'Right distance captured: {self.right_distance:.2f} cm')
+            # self.send_events(f'Right distance captured: {self.right_distance:.2f} cm')
             self.decide_and_turn()
 
         elif self.state == RobotState.IDLE:
@@ -211,13 +217,13 @@ class RoboneoBotTester(Node):
         if self.state == RobotState.MEASURING_LEFT:
             self.left_distance = self.distance
             self.get_logger().info(f'✅ Left distance captured: {self.left_distance:.2f} cm')
-            self.send_events(f'Left distance captured: {self.left_distance:.2f} cm')
+            # self.send_events(f'Left distance captured: {self.left_distance:.2f} cm')
             self.turn_back_from_left()
 
         elif self.state == RobotState.MEASURING_RIGHT:
             self.right_distance = self.distance
             self.get_logger().info(f'✅ Right distance captured: {self.right_distance:.2f} cm')
-            self.send_events(f'Right distance captured: {self.right_distance:.2f} cm')
+            # self.send_events(f'Right distance captured: {self.right_distance:.2f} cm')
             self.decide_and_turn()
 
         elif self.state == RobotState.IDLE and self.distance < self.config['detected_distance']:
@@ -247,7 +253,7 @@ class RoboneoBotTester(Node):
             }
             
             try:
-                response = requests.post(self.config['events_url'], headers=headers, json=payload, timeout=2)
+                response = requests.post(self.config['events_url'], headers=headers, json=payload)
                 if response.status_code == 200:
                     self.get_logger().info(f'HTTP POST to {self.config['events_url']} succeeded: {response.text}')
                 else:
@@ -265,7 +271,7 @@ class RoboneoBotTester(Node):
         Start turning left to measure the left-side clearance.
         """
         self.get_logger().info('🔄 Turning left to measure side distance...')
-        self.send_events('Turning left to measure side distance')
+        # self.send_events('Turning left to measure side distance')
         self.send_twist_command(0.0, 1.0)  # Turn left (positive angular z)
         self.state = RobotState.TURNING_LEFT_TO_MEASURE
         self.timer = self.create_timer(self.config['turn_90deg_duration'], self.on_left_turn_finished)  # Wait ~90 deg turn
@@ -277,7 +283,7 @@ class RoboneoBotTester(Node):
         self.destroy_timer_or_cancel()
         self.send_twist_command(0.0, 0.0)
         self.get_logger().info("🛑 Stopped. Now capturing left distance...")
-        self.send_events("Stopped. Now capturing left distance")
+        # self.send_events("Stopped. Now capturing left distance")
         sleep(0.2)
         self.state = RobotState.MEASURING_LEFT  # Next distance read will be used as left
 
@@ -286,7 +292,7 @@ class RoboneoBotTester(Node):
         Return to forward-facing orientation after measuring left.
         """
         self.get_logger().info('↩️ Turning back to center (from left)...')
-        self.send_events('Turning back to center (from left)')
+        # self.send_events('Turning back to center (from left)')
         self.send_twist_command(0.0, -1.0)  # Turn right
         self.state = RobotState.TURNING_BACK_FROM_LEFT
         self.timer = self.create_timer(self.config['turn_90deg_duration'], self.on_turned_back_from_left)
@@ -298,7 +304,7 @@ class RoboneoBotTester(Node):
         self.destroy_timer_or_cancel()
         self.send_twist_command(0.0, 0.0)
         self.get_logger().info("✅ Back to center. Preparing to measure right side.")
-        self.send_events("Back to center. Preparing to measure right side.")
+        # self.send_events("Back to center. Preparing to measure right side.")
         self.measure_right_start()
 
     def measure_right_start(self):
@@ -306,7 +312,7 @@ class RoboneoBotTester(Node):
         Turn right to measure right-side clearance.
         """
         self.get_logger().info('🔄 Turning right to measure side distance...')
-        self.send_events('Turning right to measure side distance')
+        # self.send_events('Turning right to measure side distance')
         self.send_twist_command(0.0, -1.0)  # Turn right
         self.state = RobotState.TURNING_RIGHT_TO_MEASURE
         self.timer = self.create_timer(self.config['turn_90deg_duration'], self.on_right_turn_finished)
@@ -318,7 +324,7 @@ class RoboneoBotTester(Node):
         self.destroy_timer_or_cancel()
         self.send_twist_command(0.0, 0.0)
         self.get_logger().info("🛑 Stopped. Now capturing right distance...")
-        self.send_events("Stopped. Now capturing right distance")
+        # self.send_events("Stopped. Now capturing right distance")
         sleep(0.2)
         self.state = RobotState.MEASURING_RIGHT  # Next distance read is right
 
@@ -332,12 +338,12 @@ class RoboneoBotTester(Node):
 
         if self.left_distance > self.right_distance:
             self.get_logger().info('🟢 Turning left — more space available.')
-            self.send_events('Turning left — more space available.')
+            # self.send_events('Turning left — more space available.')
             self.send_twist_command(0.0, 1.0)  # Turn left
             self.timer = self.create_timer(self.config['turn_180deg_duration'], self.on_final_turn_done)
         else:
             self.get_logger().info('🟢 Turning right — equal or more space.')
-            self.send_events('Turning right — equal or more space.')
+            # self.send_events('Turning right — equal or more space.')
             self.timer = self.create_timer(0.0, self.on_final_turn_done)
 
         self.state = RobotState.TURNING_FINAL
@@ -349,7 +355,7 @@ class RoboneoBotTester(Node):
         self.destroy_timer_or_cancel()
         self.send_twist_command(0.0, 0.0)
         self.get_logger().info("🚀 Resuming forward movement.")
-        self.send_events("Resuming forward movement.")
+        # self.send_events("Resuming forward movement.")
         self.send_twist_command(self.config['forward_speed'], 0.0)  # Move forward
         self.reset_state()
 
@@ -385,7 +391,7 @@ class RoboneoBotTester(Node):
             return
             
         self.get_logger().info('🔍 Starting 360° pillar scan...')
-        self.send_events('Starting 360° pillar scan...')
+        # self.send_events('Starting 360° pillar scan...')
         self.state = RobotState.PILLAR_SCAN_START
         self.pillar_detected = False
         self.scan_start_time = self.get_clock().now()
@@ -411,7 +417,7 @@ class RoboneoBotTester(Node):
         """
         self.send_twist_command(0.0, 0.0)
         self.get_logger().info('✅ Pillar scan complete')
-        self.send_events('Pillar scan complete')
+        # self.send_events('Pillar scan complete')
         self.state = RobotState.PILLAR_SCAN_COMPLETE
         
         # If pillar found, move toward it
@@ -422,10 +428,8 @@ class RoboneoBotTester(Node):
         else:
             # No pillar found - continue forward movement
             self.get_logger().info('❌ No pillar found - continuing forward')
-            self.send_events('No pillar found - continuing forward')
-            # self.continue_forward_movement()
-            self.send_twist_command(self.config['forward_speed'], 0.0)  # Move forward
-            self.reset_state()
+            # self.send_events('No pillar found - continuing forward')
+            self.continue_forward_movement()
 
     def check_for_pillar_during_scan(self):
         """
@@ -462,12 +466,41 @@ class RoboneoBotTester(Node):
         self.state = RobotState.STOPPED
         # self.reset_state()
 
-    # def continue_forward_movement(self):
-    #     """
-    #     Resume forward movement after pillar scan
-    #     """
-    #     self.send_twist_command(self.config['forward_speed'], 0.0)  # Move forward
-    #     self.reset_state()
+    def perform_360_rotation(self):
+        """
+        Perform a 360-degree rotation when red color is detected.
+        """
+        if self.state == RobotState.TURNING_360:
+            return  # Already performing 360 rotation
+            
+        self.get_logger().info('🔄 Starting 360-degree rotation')
+        self.state = RobotState.TURNING_360
+        
+        # Send twist command to start rotating
+        self.send_twist_command(0.0, 1.0)  # Rotate clockwise
+        
+        # Calculate 360-degree rotation duration based on 90-degree duration
+        turn_360_duration = self.config.get('turn_360deg_duration', self.config['turn_90deg_duration'] * 4)
+        
+        # Create timer to stop rotation after 360 degrees
+        self.timer = self.create_timer(turn_360_duration, self.on_360_rotation_complete)
+
+    def on_360_rotation_complete(self):
+        """
+        Called after 360-degree rotation is complete.
+        """
+        self.destroy_timer_or_cancel()
+        self.send_twist_command(0.0, 0.0)  # Stop rotation
+        self.get_logger().info("✅ 360-degree rotation complete")
+        # self.send_events("360-degree rotation complete")
+        self.reset_state()  # Return to IDLE state
+
+    def continue_forward_movement(self):
+        """
+        Resume forward movement after pillar scan
+        """
+        self.send_twist_command(self.config['forward_speed'], 0.0)  # Move forward
+        self.reset_state()
 
 
 def main(args=None):
