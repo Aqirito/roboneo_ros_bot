@@ -2,25 +2,24 @@
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import ColorRGBA, String
-import requests
-from datetime import datetime
+from std_msgs.msg import ColorRGBA, String, Float32
 
 class RoboneoBotTester(Node):
     def __init__(self):
-        super().__init__('roboneo_bot')
-
-        self.url = 'http://api_url_here/color_detection'
-        self.secret_key = 'secret_key_here'
-        self.robot_id = 'robot_id_here'
-
-        self.detected_color = ""
+        super().__init__('roboneo_bot_tester')
 
         # Create subscriber for color rgb data
         self.rgb_subscriber = self.create_subscription(
             ColorRGBA,
             '/color_sensor/rgb',
             self.rgb_callback,
+            10)
+        
+        # Create subscriber for color raw rgb data
+        self.raw_rgb_subscriber = self.create_subscription(
+            String,
+            '/color_sensor/raw_rgb',
+            self.raw_rgb_callback,
             10)
         
         # Create subscriber for color rgb data
@@ -34,13 +33,21 @@ class RoboneoBotTester(Node):
         self.get_logger().info('Roboneo Bot Tester started')
         self.get_logger().info('Subscribing to /color_sensor/rgb for color detection')
         self.get_logger().info('Subscribing to /color_sensor/color_name for color name detection')
+        self.get_logger().info('Subscribing to /color_sensor/raw_rgb for color name detection')
 
     def rgb_callback(self, msg):
         """
         Update current rgb values.
         """
-        print(f'R: {msg.r}, G: {msg.g}, B: {msg.b}, A: {msg.a}')
+        print(f'MAPPED: R: {msg.r}, G: {msg.g}, B: {msg.b}, A: {msg.a}')
         self.get_logger().debug(f'Received R:{msg.r} G:{msg.g} B:{msg.b} A:{msg.a}')
+
+    
+    def raw_rgb_callback(self, msg):
+        """
+        Update current raw rgb values.
+        """
+        print(f'RAW: {msg.data}')
     
     def color_name_callback(self, msg):
         """
@@ -70,35 +77,6 @@ class RoboneoBotTester(Node):
                 self.detected_color = "Black"
             case _:
                 self.get_logger().info("❓ Detected Unknown Color")
-
-        if self.detected_color == "Red":
-            payload = {
-                        "robot_id": self.robot_id,
-                        "color": "Red",
-                        "device_timestamp": datetime.now().isoformat()
-                    }
-            self.send_http_requests(payload)
-    
-
-    def send_http_requests(self, payload):
-        """
-        Send an HTTP POST with json data.
-        example payload json data: {"color": "Red"}
-        """
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'x-secret-key': self.secret_key
-            }
-        
-        try:
-            response = requests.post(self.url, headers=headers, json=payload, timeout=3)
-            if response.status_code == 200:
-                self.get_logger().info(f'HTTP POST to {self.url} succeeded: {response.text}')
-            else:
-                self.get_logger().error(f'HTTP POST to {self.url} failed with status code {response.status_code}')
-        except Exception as e:
-            self.get_logger().error(f'HTTP POST to {self.url} failed: {e}')
 
 def main(args=None):
     rclpy.init(args=args)
