@@ -34,9 +34,9 @@ const int echoPin = 26;
 #define LED_PIN 2
 
 // Calibration ranges for color sensor (update after measuring raw values)
-long R_min = 364, R_max = 1136;
-long G_min = 360, G_max = 1103;
-long B_min = 357, B_max = 1091;
+long R_min = 330, R_max = 1000;
+long G_min = 330, G_max = 1000;
+long B_min = 330, B_max = 1000;
 // WiFi credentials
 const char* ssid = "smartspacekk";
 const char* password = "smartspace09";
@@ -69,7 +69,8 @@ Color palette[] = {
   {"Blue",      0,   0, 255},
   {"White",   255, 255, 255},
   {"Black",     0,   0,   0},
-  {"Yellow",  255, 255,   100},
+  {"Yellow",  255, 150,   100},
+  {"Tiles",  160, 80,   80},
 //  {"Cyan",      0, 255, 255},
 //  {"Magenta", 255,   0, 255},
 //  {"Orange",  255, 165,   0},
@@ -312,10 +313,10 @@ void color_timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
     color_name_msg.data.capacity = last_color_name.length() + 1;
 
     // Prepare RGB color message
-    color_rgb_msg.r = last_r / 255.0f;  // Normalize to 0-1
-    color_rgb_msg.g = last_g / 255.0f;
-    color_rgb_msg.b = last_b / 255.0f;
-    color_rgb_msg.a = 1.0f;  // Alpha (opacity)
+    color_rgb_msg.r = last_r;
+    color_rgb_msg.g = last_g;
+    color_rgb_msg.b = last_b;
+    color_rgb_msg.a = 255.0;  // Alpha (opacity)
 
     // Prepare raw RGB as a string: "r,g,b"
     char raw_buffer[64];
