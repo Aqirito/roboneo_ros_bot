@@ -312,11 +312,11 @@ class RoboneoBotTester(Node):
         if self.left_distance > self.right_distance:
             self.get_logger().info('🟢 Turning left — more space available.')
             self.send_twist_command(0.0, 1.0)  # Turn left
-            self.timer = self.create_timer(1.4, self.on_final_turn_done)
+            self.timer = self.create_timer(self.config['turn_180deg_duration'], self.on_final_turn_done)
         else:
             self.get_logger().info('🟢 Turning right — equal or more space.')
             # self.send_twist_command(0.0, -1.0)  # Turn right
-            self.timer = self.create_timer(0.1, self.on_final_turn_done)
+            self.timer = self.create_timer(0.0, self.on_final_turn_done)
 
         self.state = RobotState.TURNING_FINAL
 
