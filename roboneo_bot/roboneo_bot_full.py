@@ -245,8 +245,9 @@ class RoboneoBotTester(Node):
                     'x-secret-key': self.config['secret_key']
                     }
             payload = {
-                "event": f"{events}",
                 "robot_id": f"{self.config['robot_id']}",
+                "tournament_round": f"{self.config['tournament_round']}",
+                "events": f"{events}",
                 "device_timestamp": f"{datetime.now().isoformat()}"
             }
         

@@ -7,6 +7,7 @@ def load_config():
         'events_url'            : 'https://pluto.kinabalumakers.dev/roboneo_2025/events', # will be provided by event Instructor
         'secret_key'            : 'D4WS34NNS57M', # will be provided by event Instructor. Dont share with anyone
         'robot_id'              : 'kinabalu_coders', # will be provided by event Instructor
+        'tournament_round'      : 0, # 0 for TESTING,  1 - 3 for TOURNAMENT rounds
 
         # Ultrasonic distance to consider as obstacle
         # Example within 0 to 17.0 cm
