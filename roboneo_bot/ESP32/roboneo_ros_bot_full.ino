@@ -14,6 +14,13 @@
 #include <Wire.h>        // instantiate the Wire library
 #include <TFLI2C.h>      // TFLuna-I2C Library
 
+
+// Sensor availability flags
+// 0 = disabled, 1 = enabled
+#define USE_TFLUNA 0 
+#define USE_ULTRASONIC 0
+#define USE_COLOR_SENSOR 0
+
 // TF-Luna LiDAR
 TFLI2C tflI2C;
 int16_t  tfDist;    // distance in centimeters
@@ -611,25 +618,30 @@ void loop() {
 
     case AGENT_CONNECTED:
       // Read TF Luna LiDAR sensor via I2C periodically (non-blocking)
-      EXECUTE_EVERY_N_MS(100, {
-        float d = readLidarDistance();
-        if (d >= 0) {
-          last_lidar_distance = d;
-        }
-      });
-
+      if (USE_TFLUNA) {
+        EXECUTE_EVERY_N_MS(100, {
+          float d = readLidarDistance();
+          if (d >= 0) {
+            last_lidar_distance = d;
+          }
+        });
+      }
       // Read ultrasonic sensor periodically (non-blocking)
-      EXECUTE_EVERY_N_MS(100, {
-        float d = readUltrasonicDistance();
-        if (d >= 0) {
-          last_ultrasonic_distance = d;
-        }
-      });
+      if (USE_ULTRASONIC) {
+        EXECUTE_EVERY_N_MS(100, {
+          float d = readUltrasonicDistance();
+          if (d >= 0) {
+            last_ultrasonic_distance = d;
+          }
+        });
+      }
 
       // Read color sensor periodically (non-blocking)
-      EXECUTE_EVERY_N_MS(200, {
-        readColorSensor();
-      });
+      if (USE_COLOR_SENSOR) {
+        EXECUTE_EVERY_N_MS(200, {
+          readColorSensor();
+        });
+      }
 
       // Check agent connection more frequently
       EXECUTE_EVERY_N_MS(500,
